@@ -6,31 +6,31 @@
  */
 const RESPONSE_SHEET_NAME = "Responses";
 
-const HEADERS = [
+const SOURCE_ORDER = ["ours", "c2w", "viga"];
+
+const METRIC_GROUPS = [
+  { key: "physical_plausibility", label: "物理真实性" },
+  { key: "camera_controllability", label: "相机可控" },
+  { key: "content_alignment", label: "内容对齐" },
+  { key: "aesthetics", label: "美学质量" }
+];
+
+const BASE_HEADERS = [
   "submitted_at",
   "nickname",
   "study_version",
   "set_id",
   "completion_mode",
-  "position_1_source",
-  "position_1_file",
-  "position_1_physical_plausibility",
-  "position_1_camera_controllability",
-  "position_1_content_alignment",
-  "position_1_aesthetics",
-  "position_2_source",
-  "position_2_file",
-  "position_2_physical_plausibility",
-  "position_2_camera_controllability",
-  "position_2_content_alignment",
-  "position_2_aesthetics",
-  "position_3_source",
-  "position_3_file",
-  "position_3_physical_plausibility",
-  "position_3_camera_controllability",
-  "position_3_content_alignment",
-  "position_3_aesthetics"
+  "display_order"
 ];
+
+const SCORE_HEADERS = METRIC_GROUPS.reduce(function (headers, metric) {
+  return headers.concat(SOURCE_ORDER.map(function (source) {
+    return source + "_" + metric.key;
+  }));
+}, []);
+
+const HEADERS = BASE_HEADERS.concat(SCORE_HEADERS);
 
 function doGet() {
   try {
@@ -38,7 +38,7 @@ function doGet() {
     return json_({
       ok: true,
       sheet: sheet.getName(),
-      data_rows: Math.max(0, sheet.getLastRow() - 1)
+      data_rows: countDataRows_(sheet)
     });
   } catch (error) {
     Logger.log(error && error.stack ? error.stack : error);
@@ -90,15 +90,60 @@ function getResponseSheet_() {
 
 function ensureHeaders_(sheet) {
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
+    initializeHeaders_(sheet);
+    return;
   }
+
+  // The first version created one technical header row. Replace that header
+  // only when it is the sole row and no survey data exists yet.
+  if (
+    sheet.getLastRow() === 1 &&
+    String(sheet.getRange(1, 1).getValue()) === "submitted_at"
+  ) {
+    sheet.clear();
+    initializeHeaders_(sheet);
+  }
+}
+
+function initializeHeaders_(sheet) {
+  const groupHeaders = new Array(HEADERS.length).fill("");
+  groupHeaders[0] = "提交信息";
+  METRIC_GROUPS.forEach(function (metric, index) {
+    groupHeaders[BASE_HEADERS.length + index * SOURCE_ORDER.length] = metric.label;
+  });
+
+  sheet.getRange(1, 1, 1, HEADERS.length).setValues([groupHeaders]);
+  sheet.getRange(2, 1, 1, HEADERS.length).setValues([HEADERS]);
+  sheet.getRange(1, 1, 1, HEADERS.length)
+    .setFontWeight("bold")
+    .setBackground("#dcefeb");
+  sheet.getRange(2, 1, 1, HEADERS.length)
+    .setFontWeight("bold")
+    .setBackground("#f1f5f4");
+  sheet.setFrozenRows(2);
+
+  sheet.getRange(1, 1, 1, BASE_HEADERS.length).merge();
+  METRIC_GROUPS.forEach(function (metric, index) {
+    sheet.getRange(
+      1,
+      BASE_HEADERS.length + index * SOURCE_ORDER.length + 1,
+      1,
+      SOURCE_ORDER.length
+    ).merge();
+  });
+}
+
+function countDataRows_(sheet) {
+  const hasMatrixHeaders = String(sheet.getRange(1, 1).getValue()) === "提交信息";
+  const headerRows = hasMatrixHeaders ? 2 : 1;
+  return Math.max(0, sheet.getLastRow() - headerRows);
 }
 
 function buildRow_(payload) {
   const videos = Array.isArray(payload.videos) ? payload.videos : [];
-  const byPosition = {};
+  const bySource = {};
   videos.forEach(function (video) {
-    byPosition[String(video.position)] = video;
+    bySource[String(video.source)] = video;
   });
 
   const row = [
@@ -106,18 +151,16 @@ function buildRow_(payload) {
     safeCell_(payload.nickname),
     safeCell_(payload.study_version),
     Number(payload.set_id) || "",
-    safeCell_(payload.completion_mode)
+    safeCell_(payload.completion_mode),
+    safeCell_(JSON.stringify(payload.display_order || []))
   ];
 
-  [1, 2, 3].forEach(function (position) {
-    const video = byPosition[String(position)] || {};
-    const scores = video.scores || {};
-    row.push(safeCell_(video.source));
-    row.push(safeCell_(video.file));
-    row.push(numberOrBlank_(scores.physical_plausibility));
-    row.push(numberOrBlank_(scores.camera_controllability));
-    row.push(numberOrBlank_(scores.content_alignment));
-    row.push(numberOrBlank_(scores.aesthetics));
+  METRIC_GROUPS.forEach(function (metric) {
+    SOURCE_ORDER.forEach(function (source) {
+      const video = bySource[source] || {};
+      const scores = video.scores || {};
+      row.push(numberOrBlank_(scores[metric.key]));
+    });
   });
 
   return row;
