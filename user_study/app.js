@@ -10,6 +10,7 @@
   var localHistoryKey = "user-study-history-v1";
   var totalSetCount = 13;
   var targetGroupCount = 8;
+  var testMode = new URLSearchParams(window.location.search).get("test") === "1";
 
   var metrics = [
     {
@@ -61,6 +62,7 @@
   var scoringSection = document.getElementById("scoring-section");
   var scoreGrid = document.getElementById("score-grid");
   var scoringForm = document.getElementById("scoring-form");
+  var autofillButton = document.getElementById("autofill-button");
   var submitButton = document.getElementById("submit-button");
   var roundMessage = document.getElementById("round-message");
   var submitMessage = document.getElementById("submit-message");
@@ -264,6 +266,7 @@
     }
     renderScoreCards();
     setHidden(scoringSection, false);
+    setHidden(autofillButton, !testMode);
     window.setTimeout(function () {
       scoringSection.scrollIntoView({ behavior: "smooth", block: "start" });
       var firstInput = scoringSection.querySelector("input");
@@ -625,6 +628,14 @@
     state.missingPositions.forEach(function (position) {
       markComplete(position, "skipped");
     });
+  });
+
+  autofillButton.addEventListener("click", function () {
+    scoreGrid.querySelectorAll("input[type=number]").forEach(function (input) {
+      input.value = "5.0";
+    });
+    submitMessage.className = "form-message";
+    submitMessage.textContent = "测试评分已填入 5.0；请确认后再点击提交。";
   });
 
   scoringForm.addEventListener("submit", async function (event) {

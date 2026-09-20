@@ -235,6 +235,17 @@ input[type="number"]:focus {
   transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
 }
 
+.test-button {
+  border-color: #d5a26f;
+  color: #8a5527;
+  background: #fff7ec;
+}
+
+.test-button:hover:not(:disabled) {
+  border-color: #c88749;
+  background: #ffeedb;
+}
+
 .primary-button {
   border: 1px solid var(--accent);
   color: #fff;
