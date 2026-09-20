@@ -137,7 +137,8 @@
   function refreshRoundUi() {
     var currentRound = state.groupsCompleted + 1;
     var groupsLeftAfterThis = Math.max(0, targetGroupCount - currentRound);
-    roundSummary.textContent = "当前为第 " + currentRound + " / " + targetGroupCount + " 组。";
+    roundSummary.textContent = "已记录 " + state.groupsCompleted + " 组；当前第 " +
+      currentRound + " / " + targetGroupCount + " 组；本组后还需 " + groupsLeftAfterThis + " 组。";
 
     if (groupsLeftAfterThis > 0) {
       roundMessage.textContent = "提交本组后将自动进入下一组，还需完成 " + groupsLeftAfterThis + " 组。";
