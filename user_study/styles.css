@@ -288,6 +288,12 @@ button:disabled {
   margin-bottom: 0;
 }
 
+.round-summary {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .progress-chip,
 .scale-badge {
   display: inline-flex;
@@ -323,7 +329,7 @@ button:disabled {
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -520,6 +526,13 @@ button:disabled {
   margin-top: 25px;
 }
 
+.round-message {
+  margin: 0 0 4px;
+  color: var(--accent-dark);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .success-panel {
   width: min(640px, 100%);
   padding: clamp(30px, 6vw, 72px);
@@ -551,6 +564,12 @@ button:disabled {
   font-size: 0.72rem;
 }
 
+@media (max-width: 1100px) {
+  .video-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 820px) {
   .app-shell {
     width: min(100% - 28px, 680px);
@@ -561,39 +580,20 @@ button:disabled {
     padding-bottom: 34px;
   }
 
-  .video-grid,
+  .video-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .score-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .video-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(150px, 0.85fr);
-    grid-template-rows: auto 1fr auto;
-  }
-
-  .video-card-header {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .video-frame {
-    grid-column: 1;
-    grid-row: 2 / span 2;
-    min-height: 180px;
+    display: block;
   }
 
   .video-card-footer {
-    grid-column: 2;
-    grid-row: 2;
-    align-self: end;
-    padding: 13px 16px;
-  }
-
-  .video-card .video-state {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
+    min-height: 0;
   }
 
   .submit-row {
@@ -644,6 +644,11 @@ button:disabled {
     justify-content: center;
   }
 
+  .video-grid,
+  .score-grid {
+    grid-template-columns: 1fr;
+  }
+
   .video-card {
     display: block;
   }
@@ -654,10 +659,6 @@ button:disabled {
 
   .video-card-footer {
     min-height: 0;
-  }
-
-  .score-row {
-    grid-template-columns: minmax(0, 1fr) 70px;
   }
 
   .site-footer {

@@ -5,8 +5,10 @@
  * file, and deploy it as a Web app. See README.md for the exact settings.
  */
 const RESPONSE_SHEET_NAME = "Responses";
+const MODERN_RESPONSE_SHEET_NAME = "Responses_5_methods";
+const TARGET_GROUP_COUNT = 8;
 
-const SOURCE_ORDER = ["ours", "c2w", "viga"];
+const SOURCE_ORDER = ["ours", "c2w", "viga", "direct", "mcp"];
 
 const METRIC_GROUPS = [
   { key: "physical_plausibility", label: "物理真实性" },
@@ -25,20 +27,31 @@ const BASE_HEADERS = [
 ];
 
 const SCORE_HEADERS = METRIC_GROUPS.reduce(function (headers, metric) {
-  return headers.concat(SOURCE_ORDER.map(function (source) {
-    return source + "_" + metric.key;
-  }));
+  return headers.concat(SOURCE_ORDER);
 }, []);
 
 const HEADERS = BASE_HEADERS.concat(SCORE_HEADERS);
 
-function doGet() {
+function doGet(event) {
   try {
+    const parameters = (event && event.parameter) || {};
+    if (parameters.action === "history") {
+      const history = {
+        ok: true,
+        completed_set_ids: getCompletedSetIds_(parameters.nickname || ""),
+        target_group_count: TARGET_GROUP_COUNT
+      };
+      return parameters.callback
+        ? jsonp_(parameters.callback, history)
+        : json_(history);
+    }
+
     const sheet = getResponseSheet_();
     return json_({
       ok: true,
       sheet: sheet.getName(),
-      data_rows: countDataRows_(sheet)
+      data_rows: countDataRows_(sheet),
+      source_order: SOURCE_ORDER
     });
   } catch (error) {
     Logger.log(error && error.stack ? error.stack : error);
@@ -84,22 +97,24 @@ function getResponseSheet_() {
     throw new Error("This script must be bound to a Google Sheet.");
   }
 
-  return spreadsheet.getSheetByName(RESPONSE_SHEET_NAME) ||
-    spreadsheet.insertSheet(RESPONSE_SHEET_NAME);
+  const primary = spreadsheet.getSheetByName(RESPONSE_SHEET_NAME);
+  if (!primary) {
+    return spreadsheet.insertSheet(RESPONSE_SHEET_NAME);
+  }
+
+  if (isCurrentSchema_(primary) || !hasSurveyData_(primary)) {
+    return primary;
+  }
+
+  return spreadsheet.getSheetByName(MODERN_RESPONSE_SHEET_NAME) ||
+    spreadsheet.insertSheet(MODERN_RESPONSE_SHEET_NAME);
 }
 
 function ensureHeaders_(sheet) {
-  if (sheet.getLastRow() === 0) {
-    initializeHeaders_(sheet);
-    return;
-  }
-
-  // The first version created one technical header row. Replace that header
-  // only when it is the sole row and no survey data exists yet.
-  if (
-    sheet.getLastRow() === 1 &&
-    String(sheet.getRange(1, 1).getValue()) === "submitted_at"
-  ) {
+  if (!isCurrentSchema_(sheet)) {
+    if (hasSurveyData_(sheet)) {
+      throw new Error("The selected response sheet has an incompatible schema.");
+    }
     sheet.clear();
     initializeHeaders_(sheet);
   }
@@ -137,6 +152,70 @@ function countDataRows_(sheet) {
   const hasMatrixHeaders = String(sheet.getRange(1, 1).getValue()) === "提交信息";
   const headerRows = hasMatrixHeaders ? 2 : 1;
   return Math.max(0, sheet.getLastRow() - headerRows);
+}
+
+function isCurrentSchema_(sheet) {
+  return sheet.getLastColumn() >= HEADERS.length &&
+    String(sheet.getRange(1, 1).getValue()) === "提交信息" &&
+    String(sheet.getRange(2, BASE_HEADERS.length + 1).getValue()) === SOURCE_ORDER[0] &&
+    String(sheet.getRange(2, BASE_HEADERS.length + SOURCE_ORDER.length).getValue()) === SOURCE_ORDER[SOURCE_ORDER.length - 1];
+}
+
+function hasSurveyData_(sheet) {
+  const lastRow = sheet.getLastRow();
+  const firstCell = String(sheet.getRange(1, 1).getValue());
+  const firstDataRow = firstCell === "提交信息" ? 3 : 2;
+  if (lastRow < firstDataRow) {
+    return false;
+  }
+
+  return sheet.getRange(firstDataRow, 1, lastRow - firstDataRow + 1, 1)
+    .getValues()
+    .some(function (row) { return String(row[0]).trim() !== ""; });
+}
+
+function getAllResponseSheets_() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet) {
+    return [];
+  }
+
+  return [RESPONSE_SHEET_NAME, MODERN_RESPONSE_SHEET_NAME]
+    .map(function (name) { return spreadsheet.getSheetByName(name); })
+    .filter(function (sheet) { return sheet !== null; });
+}
+
+function normalizeNickname_(nickname) {
+  return String(nickname || "").trim().toLocaleLowerCase();
+}
+
+function getCompletedSetIds_(nickname) {
+  const normalized = normalizeNickname_(nickname);
+  const completed = {};
+
+  if (!normalized) {
+    return [];
+  }
+
+  getAllResponseSheets_().forEach(function (sheet) {
+    const values = sheet.getDataRange().getValues();
+    const firstCell = values.length && values[0].length ? String(values[0][0]) : "";
+    const firstDataIndex = firstCell === "提交信息" ? 2 : 1;
+
+    for (let index = firstDataIndex; index < values.length; index += 1) {
+      const row = values[index];
+      if (normalizeNickname_(row[1]) !== normalized) {
+        continue;
+      }
+
+      const setId = Number(row[3]);
+      if (Number.isInteger(setId) && setId >= 1 && setId <= 13) {
+        completed[setId] = true;
+      }
+    }
+  });
+
+  return Object.keys(completed).map(Number).sort(function (a, b) { return a - b; });
 }
 
 function buildRow_(payload) {
@@ -180,4 +259,14 @@ function json_(value) {
   return ContentService
     .createTextOutput(JSON.stringify(value))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonp_(callback, value) {
+  if (!/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(callback)) {
+    return json_({ ok: false, error: "Invalid callback name." });
+  }
+
+  return ContentService
+    .createTextOutput(callback + "(" + JSON.stringify(value) + ");")
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }

@@ -7,6 +7,9 @@
     : "";
   var studyVersion = config.studyVersion || "user-study-v1";
   var localStorageKey = "user-study-submissions-v1";
+  var localHistoryKey = "user-study-history-v1";
+  var totalSetCount = 13;
+  var targetGroupCount = 8;
 
   var metrics = [
     {
@@ -31,14 +34,17 @@
     }
   ];
 
-  var sources = ["viga", "c2w", "ours"];
+  var sources = ["viga", "c2w", "ours", "direct", "mcp"];
   var state = {
     nickname: "",
     setId: null,
     displayVideos: [],
     completedPositions: new Set(),
     missingPositions: new Set(),
-    completionMode: "watched"
+    completionMode: "watched",
+    completedSetIds: new Set(),
+    availableSetIds: [],
+    groupsCompleted: 0
   };
 
   var introScreen = document.getElementById("intro-screen");
@@ -49,12 +55,14 @@
   var introError = document.getElementById("intro-error");
   var videoGrid = document.getElementById("video-grid");
   var progressCount = document.getElementById("progress-count");
+  var roundSummary = document.getElementById("round-summary");
   var watchStatus = document.getElementById("watch-status");
   var skipVideosButton = document.getElementById("skip-videos");
   var scoringSection = document.getElementById("scoring-section");
   var scoreGrid = document.getElementById("score-grid");
   var scoringForm = document.getElementById("scoring-form");
   var submitButton = document.getElementById("submit-button");
+  var roundMessage = document.getElementById("round-message");
   var submitMessage = document.getElementById("submit-message");
   var successMessage = document.getElementById("success-message");
   var restartButton = document.getElementById("restart-button");
@@ -74,8 +82,8 @@
     return String(value).padStart(2, "0");
   }
 
-  function createSession() {
-    state.setId = Math.floor(Math.random() * 13) + 1;
+  function createSession(setId) {
+    state.setId = setId;
     state.displayVideos = shuffle(sources).map(function (source, index) {
       var file = twoDigit(state.setId) + ".mp4";
       return {
@@ -88,6 +96,43 @@
     state.completedPositions = new Set();
     state.missingPositions = new Set();
     state.completionMode = "watched";
+  }
+
+  function allSetIds() {
+    var ids = [];
+    for (var id = 1; id <= totalSetCount; id += 1) {
+      ids.push(id);
+    }
+    return ids;
+  }
+
+  function validSetIds(values) {
+    var seen = new Set();
+    (Array.isArray(values) ? values : []).forEach(function (value) {
+      var id = Number(value);
+      if (Number.isInteger(id) && id >= 1 && id <= totalSetCount) {
+        seen.add(id);
+      }
+    });
+    return Array.from(seen).sort(function (a, b) { return a - b; });
+  }
+
+  function normalizeNickname(nickname) {
+    return String(nickname || "").trim().toLocaleLowerCase();
+  }
+
+  function refreshRoundUi() {
+    var currentRound = state.groupsCompleted + 1;
+    var groupsLeftAfterThis = Math.max(0, targetGroupCount - currentRound);
+    roundSummary.textContent = "当前为第 " + currentRound + " / " + targetGroupCount + " 组。";
+
+    if (groupsLeftAfterThis > 0) {
+      roundMessage.textContent = "提交本组后将自动进入下一组，还需完成 " + groupsLeftAfterThis + " 组。";
+      submitButton.firstChild.textContent = "提交本组并进入下一组 ";
+    } else {
+      roundMessage.textContent = "这是最后一组，提交后调查结束。";
+      submitButton.firstChild.textContent = "提交最后一组 ";
+    }
   }
 
   function setHidden(element, hidden) {
@@ -193,12 +238,12 @@
 
   function updateProgress() {
     var completed = state.completedPositions.size;
-    progressCount.textContent = completed + " / 3";
+    progressCount.textContent = completed + " / 5";
 
-    if (completed === 3) {
+    if (completed === 5) {
       watchStatus.textContent = state.completionMode === "skipped_missing"
         ? "空视频已跳过，可以开始评分。"
-        : "三个视频已播放完成，可以开始评分。";
+        : "五个视频已播放完成，可以开始评分。";
       setHidden(skipVideosButton, true);
       revealScoring();
       return;
@@ -320,6 +365,152 @@
     }
   }
 
+  function getLocalSetIds(nickname) {
+    var normalized = normalizeNickname(nickname);
+    var ids = [];
+
+    try {
+      var submissions = JSON.parse(window.localStorage.getItem(localStorageKey) || "[]");
+      if (Array.isArray(submissions)) {
+        submissions.forEach(function (submission) {
+          if (normalizeNickname(submission.nickname) === normalized) {
+            ids.push(submission.set_id);
+          }
+        });
+      }
+
+      var history = JSON.parse(window.localStorage.getItem(localHistoryKey) || "[]");
+      if (Array.isArray(history)) {
+        history.forEach(function (entry) {
+          if (normalizeNickname(entry.nickname) === normalized) {
+            ids.push(entry.set_id);
+          }
+        });
+      }
+    } catch (error) {
+      return validSetIds(ids);
+    }
+
+    return validSetIds(ids);
+  }
+
+  function rememberLocalSet(nickname, setId) {
+    try {
+      var history = JSON.parse(window.localStorage.getItem(localHistoryKey) || "[]");
+      if (!Array.isArray(history)) {
+        history = [];
+      }
+      history.push({
+        nickname: nickname,
+        set_id: setId,
+        submitted_at: new Date().toISOString()
+      });
+      window.localStorage.setItem(localHistoryKey, JSON.stringify(history.slice(-100)));
+    } catch (error) {
+      // Local history is only a convenience; the online sheet remains primary.
+    }
+  }
+
+  function requestRemoteHistory(nickname) {
+    return new Promise(function (resolve, reject) {
+      if (!submissionEndpoint) {
+        resolve([]);
+        return;
+      }
+
+      var callbackName = "__userStudyHistory_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+      var script = document.createElement("script");
+      var separator = submissionEndpoint.indexOf("?") >= 0 ? "&" : "?";
+      var requestUrl = submissionEndpoint + separator + "action=history&nickname=" +
+        encodeURIComponent(nickname) + "&callback=" + callbackName;
+      var timeoutId = window.setTimeout(function () {
+        cleanup();
+        reject(new Error("History request timed out"));
+      }, 8000);
+
+      function cleanup() {
+        window.clearTimeout(timeoutId);
+        script.remove();
+        try {
+          delete window[callbackName];
+        } catch (error) {
+          window[callbackName] = undefined;
+        }
+      }
+
+      window[callbackName] = function (response) {
+        cleanup();
+        if (response && response.ok) {
+          resolve(response.completed_set_ids || []);
+        } else {
+          reject(new Error((response && response.error) || "History request failed"));
+        }
+      };
+
+      script.onerror = function () {
+        cleanup();
+        reject(new Error("History request failed"));
+      };
+      script.src = requestUrl;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function loadHistory(nickname) {
+    var localIds = getLocalSetIds(nickname);
+    if (!submissionEndpoint) {
+      return localIds;
+    }
+
+    try {
+      var remoteIds = await requestRemoteHistory(nickname);
+      return validSetIds(remoteIds.concat(localIds));
+    } catch (error) {
+      return localIds;
+    }
+  }
+
+  function startRound(setId) {
+    createSession(setId);
+    refreshRoundUi();
+    renderVideoCards();
+    setHidden(scoringSection, true);
+    submitButton.disabled = false;
+    submitMessage.textContent = "";
+    setHidden(studyScreen, false);
+    setHidden(successScreen, true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function showFinalSuccess(message) {
+    setHidden(introScreen, true);
+    setHidden(studyScreen, true);
+    setHidden(successScreen, false);
+    successMessage.textContent = message;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function beginStudy(nickname, startButton) {
+    startButton.disabled = true;
+    startButton.firstChild.textContent = "正在检查历史记录… ";
+
+    var historyIds = await loadHistory(nickname);
+    state.nickname = nickname;
+    state.completedSetIds = new Set(historyIds);
+    state.groupsCompleted = state.completedSetIds.size;
+
+    if (state.groupsCompleted >= targetGroupCount) {
+      showFinalSuccess("这个昵称已经完成了 " + targetGroupCount + " 组测试，感谢你的参与。");
+      return;
+    }
+
+    state.availableSetIds = allSetIds().filter(function (id) {
+      return !state.completedSetIds.has(id);
+    });
+
+    startRound(shuffle(state.availableSetIds)[0]);
+  }
+
   function sendWithHiddenForm(payload) {
     return new Promise(function (resolve, reject) {
       var frameName = "user-study-submit-" + Date.now();
@@ -401,9 +592,10 @@
     setHidden(introError, false);
   }
 
-  nicknameForm.addEventListener("submit", function (event) {
+  nicknameForm.addEventListener("submit", async function (event) {
     event.preventDefault();
     var nickname = nicknameInput.value.trim();
+    var startButton = nicknameForm.querySelector("button");
 
     if (!nickname) {
       showIntroError("请输入昵称后再开始。 ");
@@ -419,12 +611,14 @@
 
     introError.textContent = "";
     setHidden(introError, true);
-    state.nickname = nickname;
-    createSession();
-    renderVideoCards();
-    setHidden(introScreen, true);
-    setHidden(studyScreen, false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    try {
+      await beginStudy(nickname, startButton);
+    } catch (error) {
+      startButton.disabled = false;
+      startButton.firstChild.textContent = "开始调查 ";
+      showIntroError("历史记录查询失败，请稍后重试。 ");
+    }
   });
 
   skipVideosButton.addEventListener("click", function () {
@@ -447,21 +641,38 @@
 
     var payload = collectPayload();
     submitButton.disabled = true;
-    submitButton.textContent = "正在提交…";
+    submitButton.firstChild.textContent = "正在提交… ";
 
     var result = await sendPayload(payload);
-    setHidden(studyScreen, true);
-    setHidden(successScreen, false);
+    rememberLocalSet(state.nickname, state.setId);
+    state.completedSetIds.add(state.setId);
+    state.groupsCompleted = state.completedSetIds.size;
+    state.availableSetIds = allSetIds().filter(function (id) {
+      return !state.completedSetIds.has(id);
+    });
+
+    var deliveryMessage;
 
     if (result.mode === "online") {
-      successMessage.textContent = "提交请求已发送到线上数据库，感谢你的帮助。稍后可在 Responses 工作表中查看记录。";
+      deliveryMessage = "本组评分已发送到线上数据库。";
     } else if (!submissionEndpoint) {
-      successMessage.textContent = "线上接口尚未配置，评分已暂存在本设备中。完成数据库部署后即可改为线上提交。";
+      deliveryMessage = "线上接口尚未配置，本组评分已暂存在本设备中。";
     } else if (result.stored) {
-      successMessage.textContent = "线上接口暂时连接失败，评分已暂存在本设备中。请检查 Apps Script 部署权限或稍后重试。";
+      deliveryMessage = "线上接口暂时连接失败，本组评分已暂存在本设备中。";
     } else {
-      successMessage.textContent = "线上接口连接失败，且本设备暂存失败。请保留本页信息并联系调查发起人。";
+      deliveryMessage = "线上接口连接失败，且本设备暂存失败。请保留本页信息并联系调查发起人。";
     }
+
+    if (state.groupsCompleted >= targetGroupCount || state.availableSetIds.length === 0) {
+      showFinalSuccess(deliveryMessage + " 8 组测试已完成，感谢你的参与。");
+      return;
+    }
+
+    submitMessage.textContent = deliveryMessage;
+    roundMessage.textContent = "本组已提交，即将进入下一组…";
+    window.setTimeout(function () {
+      startRound(shuffle(state.availableSetIds)[0]);
+    }, 900);
   });
 
   restartButton.addEventListener("click", function () {

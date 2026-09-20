@@ -25,7 +25,8 @@
           <div class="section-kicker">01 / 开始</div>
           <h2 id="intro-title">感谢参与本次调查</h2>
           <p class="intro-copy">
-            接下来你会看到三个视频。请完整观看它们，并根据你的直观感受分别评分。
+            本调查包含最多 8 组测试，每组 5 个视频，预计需要一段时间完成。
+            请在时间充裕时开始；中途离开后，使用同一个昵称可以从已完成的组别继续。
             你的昵称仅用于标记本次数据，不会用于其他用途。
           </p>
 
@@ -55,10 +56,11 @@
           <div class="study-heading">
             <div>
               <div class="section-kicker">02 / 观看</div>
-              <h2>请完整观看三个视频</h2>
+              <h2>请完整观看五个视频</h2>
+              <p id="round-summary" class="round-summary"></p>
             </div>
             <div class="progress-chip" aria-label="视频完成进度">
-              <span id="progress-count">0 / 3</span>
+              <span id="progress-count">0 / 5</span>
               <span class="progress-label">已完成</span>
             </div>
           </div>
@@ -80,7 +82,7 @@
             <div class="section-kicker">03 / 评分</div>
             <div class="scoring-heading">
               <div>
-                <h2 id="scoring-title">请为三个视频评分</h2>
+                <h2 id="scoring-title">请为五个视频评分</h2>
                 <p>每项分值为 0.1–5.0 分，分数越高代表表现越好。</p>
               </div>
               <span class="scale-badge">0.1 — 5.0</span>
@@ -89,9 +91,12 @@
             <form id="scoring-form" novalidate>
               <div id="score-grid" class="score-grid"></div>
               <div class="submit-row">
-                <p id="submit-message" class="form-message" role="status"></p>
+                <div>
+                  <p id="round-message" class="round-message" role="status"></p>
+                  <p id="submit-message" class="form-message" role="status"></p>
+                </div>
                 <button id="submit-button" class="primary-button" type="submit">
-                  提交评分
+                  提交本组并进入下一组
                   <span aria-hidden="true">↗</span>
                 </button>
               </div>
@@ -114,7 +119,7 @@
       </footer>
     </main>
 
-    <script src="config.js?v=2"></script>
-    <script src="app.js?v=3" defer></script>
+    <script src="config.js?v=3"></script>
+    <script src="app.js?v=4" defer></script>
   </body>
 </html>
