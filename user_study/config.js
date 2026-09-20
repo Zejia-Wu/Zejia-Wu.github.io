@@ -5,7 +5,6 @@
  */
 window.USER_STUDY_CONFIG = Object.freeze({
   submissionEndpoint: "https://script.google.com/macros/s/AKfycbxWHyHWqR9qIeR77LO6fwNFU20ArIZREaXSi6XIRZaEeL6txrv3l5Vxa7y6b8Ep1BCCUQ/exec",
-  // Local fallback: ../videos/ . For production, use a public object-storage prefix.
-  videoBaseUrl: "../videos/",
+  videoBaseUrl: "https://for-videos-of-user-study-in-agent-sim-1492458513.cos.ap-nanjing.myqcloud.com",
   studyVersion: "user-study-v2"
 });
