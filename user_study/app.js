@@ -38,10 +38,7 @@
   ];
 
   // Prompt text can be filled per set later. It is intentionally blank for now.
-  var prompts = {};
-  for (var promptSetId = 1; promptSetId <= 13; promptSetId += 1) {
-    prompts[String(promptSetId)] = "";
-  }
+  var prompts = window.USER_STUDY_PROMPTS || {};
 
   var sources = ["viga", "c2w", "ours", "direct", "mcp", "swe"];
   var state = {
