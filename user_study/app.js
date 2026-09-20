@@ -459,6 +459,32 @@
     return validSetIds(ids);
   }
 
+  function resetLocalHistoryFromUrl() {
+    var resetNickname = new URLSearchParams(window.location.search).get("reset_local");
+    if (!resetNickname || !normalizeNickname(resetNickname)) {
+      return;
+    }
+
+    var normalized = normalizeNickname(resetNickname);
+    [localStorageKey, localHistoryKey].forEach(function (key) {
+      try {
+        var entries = JSON.parse(window.localStorage.getItem(key) || "[]");
+        if (Array.isArray(entries)) {
+          var remaining = entries.filter(function (entry) {
+            return normalizeNickname(entry.nickname) !== normalized;
+          });
+          window.localStorage.setItem(key, JSON.stringify(remaining));
+        }
+      } catch (error) {
+        // A reset is best-effort; the remote history is not changed here.
+      }
+    });
+
+    var cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("reset_local");
+    window.history.replaceState({}, "", cleanUrl.toString());
+  }
+
   function rememberLocalSet(nickname, setId) {
     try {
       var history = JSON.parse(window.localStorage.getItem(localHistoryKey) || "[]");
@@ -663,6 +689,8 @@
     introError.textContent = message;
     setHidden(introError, false);
   }
+
+  resetLocalHistoryFromUrl();
 
   nicknameForm.addEventListener("submit", async function (event) {
     event.preventDefault();
