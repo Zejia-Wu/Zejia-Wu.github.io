@@ -32,6 +32,20 @@ const HEADERS = [
   "position_3_aesthetics"
 ];
 
+function doGet() {
+  try {
+    const sheet = getResponseSheet_();
+    return json_({
+      ok: true,
+      sheet: sheet.getName(),
+      data_rows: Math.max(0, sheet.getLastRow() - 1)
+    });
+  } catch (error) {
+    Logger.log(error && error.stack ? error.stack : error);
+    return json_({ ok: false, error: String(error) });
+  }
+}
+
 function doPost(event) {
   try {
     const payload = readPayload_(event);
@@ -40,6 +54,7 @@ function doPost(event) {
     sheet.appendRow(buildRow_(payload));
     return json_({ ok: true });
   } catch (error) {
+    Logger.log(error && error.stack ? error.stack : error);
     return json_({ ok: false, error: String(error) });
   }
 }
