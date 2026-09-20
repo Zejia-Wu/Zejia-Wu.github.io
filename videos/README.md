@@ -11,12 +11,11 @@ The survey page expects each method directory to contain exactly these files:
 
 The active survey method names are `viga`, `c2w`, `ours`, `direct`, `mcp`, and
 `swe`. The local files have been normalized to two-digit names. `viga`, `ours`,
-`mcp`, and `swe` are ready; `c2w` and `direct` intentionally remain empty
-placeholders for now. `minimax` and `wan` are not part of the survey.
+`mcp`, `direct`, and `swe` are ready; `c2w` intentionally remains an empty
+placeholder for now. `minimax` and `wan` are not part of the survey.
 
 The page reads `window.USER_STUDY_CONFIG.videoBaseUrl` from
-`user_study/config.js`. It defaults to `../videos/` for local testing. For the
-published study, use a public object-storage prefix such as a Cloudflare R2
-custom-domain URL and upload the same directory structure there. Keep the
-large MP4 files out of the Git history unless there is a deliberate decision
-to publish them with the site.
+`user_study/config.js`. The published study uses a public COS object-storage
+prefix; for local testing, it can be changed to `../videos/`. Upload the same
+directory structure to the bucket and keep the large MP4 files out of the Git
+history.

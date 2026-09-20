@@ -306,18 +306,18 @@
 
     if (completed === sources.length) {
       watchStatus.textContent = state.completionMode === "skipped_missing"
-        ? "空视频已跳过，可以开始评分。"
+        ? (testMode ? "测试模式已跳过视频，可以开始评分。" : "空视频已跳过，可以开始评分。")
         : "全部视频已播放完成，可以开始评分。";
       setHidden(skipVideosButton, true);
       revealScoring();
       return;
     }
 
-    if (state.missingPositions.size > 0) {
-      watchStatus.textContent = "有 " + state.missingPositions.size + " 个视频资源暂未提供。";
+    if (testMode) {
+      watchStatus.textContent = "测试模式：可跳过视频并进入评分。";
       setHidden(skipVideosButton, false);
     } else {
-      watchStatus.textContent = "请完整观看全部视频，当前已完成 " + completed + " 个。";
+      watchStatus.textContent = "请观看完所有视频后继续。";
       setHidden(skipVideosButton, true);
     }
   }
@@ -694,7 +694,12 @@
   });
 
   skipVideosButton.addEventListener("click", function () {
-    state.missingPositions.forEach(function (position) {
+    var positions = testMode
+      ? state.displayVideos.map(function (videoData) { return videoData.position; })
+      : Array.from(state.missingPositions);
+    positions.filter(function (position) {
+      return !state.completedPositions.has(position);
+    }).forEach(function (position) {
       markComplete(position, "skipped");
     });
   });
