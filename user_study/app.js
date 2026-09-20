@@ -68,6 +68,10 @@
   var submitMessage = document.getElementById("submit-message");
   var successMessage = document.getElementById("success-message");
   var restartButton = document.getElementById("restart-button");
+  var videoModal = document.getElementById("video-modal");
+  var closeVideoModalButton = document.getElementById("close-video-modal");
+  var modalVideoContainer = document.getElementById("modal-video-container");
+  var lastFocusedVideoControl = null;
 
   function shuffle(items) {
     var copy = items.slice();
@@ -193,12 +197,25 @@
 
       var footer = document.createElement("div");
       footer.className = "video-card-footer";
-      footer.textContent = "播放结束后自动记录完成";
+      var footerText = document.createElement("span");
+      footerText.textContent = "播放结束后自动记录完成";
+
+      var expandButton = document.createElement("button");
+      expandButton.className = "video-expand";
+      expandButton.type = "button";
+      expandButton.textContent = "放大播放 ↗";
+      expandButton.setAttribute("aria-label", "放大播放视频 " + videoData.position);
+      expandButton.addEventListener("click", function () {
+        openVideoModal(videoData, expandButton);
+      });
+
+      footer.appendChild(footerText);
+      footer.appendChild(expandButton);
 
       card.appendChild(header);
       card.appendChild(frame);
       card.appendChild(footer);
-      videoGrid.appendChild(card);
+    videoGrid.appendChild(card);
     });
 
     updateProgress();
@@ -217,8 +234,42 @@
     placeholder.hidden = false;
     card.classList.add("is-missing");
     card.querySelector(".video-state").textContent = "暂缺资源";
-    card.querySelector(".video-card-footer").textContent = "视频制作完成后可替换此占位资源";
+    card.querySelector(".video-card-footer span").textContent = "视频制作完成后可替换此占位资源";
+    card.querySelector(".video-expand").hidden = true;
     updateProgress();
+  }
+
+  function openVideoModal(videoData, trigger) {
+    lastFocusedVideoControl = trigger;
+    modalVideoContainer.innerHTML = "";
+
+    var modalVideo = document.createElement("video");
+    modalVideo.controls = true;
+    modalVideo.playsInline = true;
+    modalVideo.preload = "metadata";
+    modalVideo.src = videoData.src;
+    modalVideo.setAttribute("aria-label", "放大播放视频 " + videoData.position);
+    modalVideo.addEventListener("ended", function () {
+      markComplete(videoData.position, "watched");
+    });
+
+    modalVideoContainer.appendChild(modalVideo);
+    setHidden(videoModal, false);
+    document.body.classList.add("modal-open");
+    closeVideoModalButton.focus();
+  }
+
+  function closeVideoModal() {
+    var modalVideo = modalVideoContainer.querySelector("video");
+    if (modalVideo) {
+      modalVideo.pause();
+    }
+    modalVideoContainer.innerHTML = "";
+    setHidden(videoModal, true);
+    document.body.classList.remove("modal-open");
+    if (lastFocusedVideoControl) {
+      lastFocusedVideoControl.focus();
+    }
   }
 
   function markComplete(position, mode) {
@@ -688,5 +739,13 @@
 
   restartButton.addEventListener("click", function () {
     window.location.reload();
+  });
+
+  closeVideoModalButton.addEventListener("click", closeVideoModal);
+  videoModal.querySelector("[data-close-video-modal]").addEventListener("click", closeVideoModal);
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !videoModal.hidden) {
+      closeVideoModal();
+    }
   });
 }());
