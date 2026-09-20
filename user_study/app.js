@@ -9,8 +9,7 @@
     ? config.videoBaseUrl.trim().replace(/\/+$/, "")
     : "../videos";
   var studyVersion = config.studyVersion || "user-study-v1";
-  var localStorageKey = "user-study-submissions-v1";
-  var localHistoryKey = "user-study-history-v1";
+  var legacyLocalStorageKeys = ["user-study-submissions-v1", "user-study-history-v1"];
   var totalSetCount = 13;
   var targetGroupCount = 8;
   var testMode = new URLSearchParams(window.location.search).get("test") === "1";
@@ -416,90 +415,31 @@
     };
   }
 
-  function saveLocally(payload) {
-    try {
-      var previous = JSON.parse(window.localStorage.getItem(localStorageKey) || "[]");
-      if (!Array.isArray(previous)) {
-        previous = [];
-      }
-      previous.push(payload);
-      window.localStorage.setItem(localStorageKey, JSON.stringify(previous.slice(-50)));
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  function getLocalSetIds(nickname) {
-    var normalized = normalizeNickname(nickname);
-    var ids = [];
-
-    try {
-      var submissions = JSON.parse(window.localStorage.getItem(localStorageKey) || "[]");
-      if (Array.isArray(submissions)) {
-        submissions.forEach(function (submission) {
-          if (normalizeNickname(submission.nickname) === normalized) {
-            ids.push(submission.set_id);
-          }
-        });
-      }
-
-      var history = JSON.parse(window.localStorage.getItem(localHistoryKey) || "[]");
-      if (Array.isArray(history)) {
-        history.forEach(function (entry) {
-          if (normalizeNickname(entry.nickname) === normalized) {
-            ids.push(entry.set_id);
-          }
-        });
-      }
-    } catch (error) {
-      return validSetIds(ids);
-    }
-
-    return validSetIds(ids);
-  }
-
-  function resetLocalHistoryFromUrl() {
-    var resetNickname = new URLSearchParams(window.location.search).get("reset_local");
-    if (!resetNickname || !normalizeNickname(resetNickname)) {
+  function clearLocalStorageFromUrl() {
+    var query = new URLSearchParams(window.location.search);
+    var clearAll = query.get("clear_local") === "all";
+    var resetNickname = query.get("reset_local");
+    if (!clearAll && !resetNickname) {
       return;
     }
 
-    var normalized = normalizeNickname(resetNickname);
-    [localStorageKey, localHistoryKey].forEach(function (key) {
-      try {
-        var entries = JSON.parse(window.localStorage.getItem(key) || "[]");
-        if (Array.isArray(entries)) {
-          var remaining = entries.filter(function (entry) {
-            return normalizeNickname(entry.nickname) !== normalized;
-          });
-          window.localStorage.setItem(key, JSON.stringify(remaining));
-        }
-      } catch (error) {
-        // A reset is best-effort; the remote history is not changed here.
-      }
-    });
-
-    var cleanUrl = new URL(window.location.href);
-    cleanUrl.searchParams.delete("reset_local");
-    window.history.replaceState({}, "", cleanUrl.toString());
-  }
-
-  function rememberLocalSet(nickname, setId) {
     try {
-      var history = JSON.parse(window.localStorage.getItem(localHistoryKey) || "[]");
-      if (!Array.isArray(history)) {
-        history = [];
+      if (clearAll) {
+        window.localStorage.clear();
+      } else {
+        legacyLocalStorageKeys.forEach(function (key) {
+          window.localStorage.removeItem(key);
+        });
       }
-      history.push({
-        nickname: nickname,
-        set_id: setId,
-        submitted_at: new Date().toISOString()
-      });
-      window.localStorage.setItem(localHistoryKey, JSON.stringify(history.slice(-100)));
     } catch (error) {
-      // Local history is only a convenience; the online sheet remains primary.
+      // The survey does not depend on localStorage.
     }
+
+    query.delete("clear_local");
+    query.delete("reset_local");
+    var cleanUrl = new URL(window.location.href);
+    cleanUrl.search = query.toString();
+    window.history.replaceState({}, "", cleanUrl.toString());
   }
 
   function requestRemoteHistory(nickname) {
@@ -548,16 +488,15 @@
   }
 
   async function loadHistory(nickname) {
-    var localIds = getLocalSetIds(nickname);
     if (!submissionEndpoint) {
-      return localIds;
+      return [];
     }
 
     try {
       var remoteIds = await requestRemoteHistory(nickname);
-      return validSetIds(remoteIds.concat(localIds));
+      return validSetIds(remoteIds);
     } catch (error) {
-      return localIds;
+      return [];
     }
   }
 
@@ -649,7 +588,7 @@
 
   async function sendPayload(payload) {
     if (!submissionEndpoint) {
-      return { mode: "local", stored: saveLocally(payload) };
+      return { mode: "offline", stored: false };
     }
 
     try {
@@ -677,7 +616,7 @@
       });
       return { mode: "online", stored: true };
     } catch (error) {
-      return { mode: "local", stored: saveLocally(payload) };
+      return { mode: "offline", stored: false };
     } finally {
       if (timeoutId) {
         window.clearTimeout(timeoutId);
@@ -690,7 +629,7 @@
     setHidden(introError, false);
   }
 
-  resetLocalHistoryFromUrl();
+  clearLocalStorageFromUrl();
 
   nicknameForm.addEventListener("submit", async function (event) {
     event.preventDefault();
@@ -757,24 +696,23 @@
     submitButton.firstChild.textContent = "正在提交… ";
 
     var result = await sendPayload(payload);
-    rememberLocalSet(state.nickname, state.setId);
+    if (result.mode !== "online") {
+      submitButton.disabled = false;
+      submitButton.firstChild.textContent = "提交本组并进入下一组";
+      submitMessage.className = "form-message error-message";
+      submitMessage.textContent = !submissionEndpoint
+        ? "线上接口尚未配置，本组评分未保存，请联系调查发起人。"
+        : "线上接口连接失败，本组评分未保存，请稍后重试。";
+      return;
+    }
+
     state.completedSetIds.add(state.setId);
     state.groupsCompleted = state.completedSetIds.size;
     state.availableSetIds = allSetIds().filter(function (id) {
       return !state.completedSetIds.has(id);
     });
 
-    var deliveryMessage;
-
-    if (result.mode === "online") {
-      deliveryMessage = "本组评分已发送到线上数据库。";
-    } else if (!submissionEndpoint) {
-      deliveryMessage = "线上接口尚未配置，本组评分已暂存在本设备中。";
-    } else if (result.stored) {
-      deliveryMessage = "线上接口暂时连接失败，本组评分已暂存在本设备中。";
-    } else {
-      deliveryMessage = "线上接口连接失败，且本设备暂存失败。请保留本页信息并联系调查发起人。";
-    }
+    var deliveryMessage = "本组评分已发送到线上数据库。";
 
     if (state.groupsCompleted >= targetGroupCount || state.availableSetIds.length === 0) {
       showFinalSuccess(deliveryMessage + " 8 组测试已完成，感谢你的参与。");
