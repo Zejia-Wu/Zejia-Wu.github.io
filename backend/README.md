@@ -22,6 +22,8 @@ window.USER_STUDY_CONFIG = Object.freeze({
 
 9. 将修改后的仓库发布到 GitHub Pages。
 
+如果之后修改了 `Code.gs`，需要在 Apps Script 中打开「部署 → 管理部署」，点击编辑，在“版本”处选择“新版本”，再点击部署。仅修改 GitHub 仓库中的 `Code.gs` 不会自动更新已经部署的 Apps Script。
+
 首次提交后，脚本会自动创建 `Responses` 工作表并写入表头。网页使用 `text/plain` POST，避免静态 GitHub Pages 调用 Apps Script 时触发跨域预检。
 
 ## 数据字段

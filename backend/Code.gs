@@ -34,7 +34,7 @@ const HEADERS = [
 
 function doPost(event) {
   try {
-    const payload = JSON.parse((event.postData && event.postData.contents) || "{}");
+    const payload = readPayload_(event);
     const sheet = getResponseSheet_();
     ensureHeaders_(sheet);
     sheet.appendRow(buildRow_(payload));
@@ -42,6 +42,25 @@ function doPost(event) {
   } catch (error) {
     return json_({ ok: false, error: String(error) });
   }
+}
+
+function readPayload_(event) {
+  const rawBody = (event.postData && event.postData.contents) || "";
+
+  if (rawBody) {
+    try {
+      return JSON.parse(rawBody);
+    } catch (rawError) {
+      // The browser fallback sends JSON in a regular form field instead.
+    }
+  }
+
+  const formPayload = event.parameter && event.parameter.payload;
+  if (formPayload) {
+    return JSON.parse(formPayload);
+  }
+
+  throw new Error("No JSON payload was received.");
 }
 
 function getResponseSheet_() {

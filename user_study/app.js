@@ -320,27 +320,53 @@
     }
   }
 
+  function sendWithHiddenForm(payload) {
+    return new Promise(function (resolve, reject) {
+      var frameName = "user-study-submit-" + Date.now();
+      var iframe = document.createElement("iframe");
+      iframe.name = frameName;
+      iframe.hidden = true;
+      iframe.setAttribute("aria-hidden", "true");
+
+      var form = document.createElement("form");
+      form.method = "POST";
+      form.action = submissionEndpoint;
+      form.target = frameName;
+      form.hidden = true;
+
+      var field = document.createElement("input");
+      field.type = "hidden";
+      field.name = "payload";
+      field.value = JSON.stringify(payload);
+      form.appendChild(field);
+
+      document.body.appendChild(iframe);
+      document.body.appendChild(form);
+
+      try {
+        form.submit();
+        window.setTimeout(function () {
+          form.remove();
+          iframe.remove();
+        }, 15000);
+        resolve({ mode: "online", queued: true });
+      } catch (error) {
+        form.remove();
+        iframe.remove();
+        reject(error);
+      }
+    });
+  }
+
   async function sendPayload(payload) {
     if (!submissionEndpoint) {
       return { mode: "local", stored: saveLocally(payload) };
     }
 
-    /*
-     * sendBeacon is designed for small cross-origin submissions that should
-     * continue even when the page is being changed. It also avoids waiting
-     * for a readable CORS response from Google Apps Script.
-     */
-    if (typeof navigator.sendBeacon === "function") {
-      try {
-        var beaconBody = new Blob([JSON.stringify(payload)], {
-          type: "text/plain;charset=utf-8"
-        });
-        if (navigator.sendBeacon(submissionEndpoint, beaconBody)) {
-          return { mode: "online", queued: true };
-        }
-      } catch (beaconError) {
-        // Continue with fetch when the browser cannot queue the beacon.
-      }
+    try {
+      return await sendWithHiddenForm(payload);
+    } catch (formError) {
+      // Continue with fetch when the browser cannot submit the hidden form.
     }
 
     var controller = typeof AbortController === "function"
