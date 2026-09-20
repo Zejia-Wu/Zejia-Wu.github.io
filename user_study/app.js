@@ -325,18 +325,48 @@
       return { mode: "local", stored: saveLocally(payload) };
     }
 
+    /*
+     * sendBeacon is designed for small cross-origin submissions that should
+     * continue even when the page is being changed. It also avoids waiting
+     * for a readable CORS response from Google Apps Script.
+     */
+    if (typeof navigator.sendBeacon === "function") {
+      try {
+        var beaconBody = new Blob([JSON.stringify(payload)], {
+          type: "text/plain;charset=utf-8"
+        });
+        if (navigator.sendBeacon(submissionEndpoint, beaconBody)) {
+          return { mode: "online", queued: true };
+        }
+      } catch (beaconError) {
+        // Continue with fetch when the browser cannot queue the beacon.
+      }
+    }
+
+    var controller = typeof AbortController === "function"
+      ? new AbortController()
+      : null;
+    var timeoutId = controller
+      ? window.setTimeout(function () { controller.abort(); }, 12000)
+      : null;
+
     try {
-      await fetch(submissionEndpoint, {
+      await window.fetch(submissionEndpoint, {
         method: "POST",
         mode: "no-cors",
         headers: {
           "Content-Type": "text/plain;charset=utf-8"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller ? controller.signal : undefined
       });
       return { mode: "online", stored: true };
     } catch (error) {
       return { mode: "local", stored: saveLocally(payload) };
+    } finally {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
     }
   }
 
@@ -398,11 +428,13 @@
     setHidden(successScreen, false);
 
     if (result.mode === "online") {
-      successMessage.textContent = "评分已经提交，感谢你的帮助。";
+      successMessage.textContent = "提交请求已发送到线上数据库，感谢你的帮助。稍后可在 Responses 工作表中查看记录。";
+    } else if (!submissionEndpoint) {
+      successMessage.textContent = "线上接口尚未配置，评分已暂存在本设备中。完成数据库部署后即可改为线上提交。";
     } else if (result.stored) {
-      successMessage.textContent = "当前线上数据库尚未配置，评分已暂存在本设备中。完成数据库部署后即可改为线上提交。";
+      successMessage.textContent = "线上接口暂时连接失败，评分已暂存在本设备中。请检查 Apps Script 部署权限或稍后重试。";
     } else {
-      successMessage.textContent = "提交接口尚未配置，且本设备暂存失败。请保留本页信息并联系调查发起人。";
+      successMessage.textContent = "线上接口连接失败，且本设备暂存失败。请保留本页信息并联系调查发起人。";
     }
   });
 
