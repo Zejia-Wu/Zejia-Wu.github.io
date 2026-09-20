@@ -344,6 +344,35 @@ button:disabled {
   font-size: 0.92rem;
 }
 
+.prompt-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.prompt-label {
+  color: var(--accent-dark);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.prompt-text {
+  min-height: 24px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.prompt-text.is-empty {
+  color: transparent;
+  user-select: none;
+}
+
 .video-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

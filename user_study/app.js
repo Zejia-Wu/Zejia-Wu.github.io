@@ -35,6 +35,12 @@
     }
   ];
 
+  // Prompt text can be filled per set later. It is intentionally blank for now.
+  var prompts = {};
+  for (var promptSetId = 1; promptSetId <= 13; promptSetId += 1) {
+    prompts[String(promptSetId)] = "";
+  }
+
   var sources = ["viga", "c2w", "ours", "direct", "mcp"];
   var state = {
     nickname: "",
@@ -57,6 +63,7 @@
   var videoGrid = document.getElementById("video-grid");
   var progressCount = document.getElementById("progress-count");
   var roundSummary = document.getElementById("round-summary");
+  var promptText = document.getElementById("prompt-text");
   var watchStatus = document.getElementById("watch-status");
   var skipVideosButton = document.getElementById("skip-videos");
   var scoringSection = document.getElementById("scoring-section");
@@ -527,6 +534,7 @@
   function startRound(setId) {
     createSession(setId);
     refreshRoundUi();
+    renderPrompt();
     renderVideoCards();
     setHidden(scoringSection, true);
     submitButton.disabled = false;
@@ -534,6 +542,12 @@
     setHidden(studyScreen, false);
     setHidden(successScreen, true);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function renderPrompt() {
+    var prompt = prompts[String(state.setId)] || "";
+    promptText.textContent = prompt;
+    promptText.classList.toggle("is-empty", !prompt);
   }
 
   function showFinalSuccess(message) {
