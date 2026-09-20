@@ -20,8 +20,8 @@
     },
     {
       key: "camera_controllability",
-      zh: "相机可控",
-      en: "Camera Controllability"
+      zh: "运镜质量",
+      en: "Camera Motion Quality"
     },
     {
       key: "content_alignment",
