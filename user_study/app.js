@@ -5,6 +5,9 @@
   var submissionEndpoint = typeof config.submissionEndpoint === "string"
     ? config.submissionEndpoint.trim()
     : "";
+  var videoBaseUrl = typeof config.videoBaseUrl === "string" && config.videoBaseUrl.trim()
+    ? config.videoBaseUrl.trim().replace(/\/+$/, "")
+    : "../videos";
   var studyVersion = config.studyVersion || "user-study-v1";
   var localStorageKey = "user-study-submissions-v1";
   var localHistoryKey = "user-study-history-v1";
@@ -41,7 +44,7 @@
     prompts[String(promptSetId)] = "";
   }
 
-  var sources = ["viga", "c2w", "ours", "direct", "mcp"];
+  var sources = ["viga", "c2w", "ours", "direct", "mcp", "swe"];
   var state = {
     nickname: "",
     setId: null,
@@ -103,7 +106,7 @@
         position: index + 1,
         source: source,
         file: file,
-        src: "../videos/" + source + "/" + file
+        src: videoBaseUrl + "/" + source + "/" + file
       };
     });
     state.completedPositions = new Set();
@@ -299,12 +302,12 @@
 
   function updateProgress() {
     var completed = state.completedPositions.size;
-    progressCount.textContent = completed + " / 5";
+    progressCount.textContent = completed + " / " + sources.length;
 
-    if (completed === 5) {
+    if (completed === sources.length) {
       watchStatus.textContent = state.completionMode === "skipped_missing"
         ? "空视频已跳过，可以开始评分。"
-        : "五个视频已播放完成，可以开始评分。";
+        : "全部视频已播放完成，可以开始评分。";
       setHidden(skipVideosButton, true);
       revealScoring();
       return;
@@ -314,7 +317,7 @@
       watchStatus.textContent = "有 " + state.missingPositions.size + " 个视频资源暂未提供。";
       setHidden(skipVideosButton, false);
     } else {
-      watchStatus.textContent = "请完整观看三个视频，当前已完成 " + completed + " 个。";
+      watchStatus.textContent = "请完整观看全部视频，当前已完成 " + completed + " 个。";
       setHidden(skipVideosButton, true);
     }
   }

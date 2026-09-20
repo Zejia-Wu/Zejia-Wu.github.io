@@ -5,10 +5,11 @@
  * file, and deploy it as a Web app. See README.md for the exact settings.
  */
 const RESPONSE_SHEET_NAME = "Responses";
-const MODERN_RESPONSE_SHEET_NAME = "Responses_5_methods";
+const MODERN_RESPONSE_SHEET_NAME = "Responses_6_methods";
+const LEGACY_MODERN_RESPONSE_SHEET_NAME = "Responses_5_methods";
 const TARGET_GROUP_COUNT = 8;
 
-const SOURCE_ORDER = ["ours", "c2w", "viga", "direct", "mcp"];
+const SOURCE_ORDER = ["ours", "c2w", "viga", "direct", "mcp", "swe"];
 
 const METRIC_GROUPS = [
   { key: "physical_plausibility", label: "物理真实性" },
@@ -180,7 +181,7 @@ function getAllResponseSheets_() {
     return [];
   }
 
-  return [RESPONSE_SHEET_NAME, MODERN_RESPONSE_SHEET_NAME]
+  return [RESPONSE_SHEET_NAME, MODERN_RESPONSE_SHEET_NAME, LEGACY_MODERN_RESPONSE_SHEET_NAME]
     .map(function (name) { return spreadsheet.getSheetByName(name); })
     .filter(function (sheet) { return sheet !== null; });
 }
