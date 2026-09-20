@@ -1,0 +1,31 @@
+# Google Sheet 数据接收端部署
+
+调查页是静态 GitHub Pages，不能直接写入数据库。本目录中的 `Code.gs` 是一个 Google Apps Script Web App 接收端，会把每次调查写入 Google Sheet 的 `Responses` 工作表。
+
+## 部署步骤
+
+1. 新建一个 Google Sheet，并保持表格为私有。
+2. 打开 `扩展程序 → Apps Script`。
+3. 删除编辑器中的示例代码，把 `Code.gs` 的内容粘贴进去并保存。
+4. 点击 `部署 → 新建部署`。
+5. 类型选择 `Web 应用`。
+6. “执行身份”选择“我”；“谁有权访问”选择“任何人”。
+7. 点击部署并完成 Google 授权，复制生成的 Web App URL。
+8. 把 URL 粘贴到 `user_study/config.js` 的 `submissionEndpoint` 字段：
+
+```js
+window.USER_STUDY_CONFIG = Object.freeze({
+  submissionEndpoint: "https://script.google.com/macros/s/你的部署ID/exec",
+  studyVersion: "user-study-v1"
+});
+```
+
+9. 将修改后的仓库发布到 GitHub Pages。
+
+首次提交后，脚本会自动创建 `Responses` 工作表并写入表头。网页使用 `text/plain` POST，避免静态 GitHub Pages 调用 Apps Script 时触发跨域预检。
+
+## 数据字段
+
+每次提交占一行，包含提交时间、昵称、组编号、完成方式，以及三个匿名展示位置对应的真实来源和四项评分。页面不会向参与者显示来源名称，但来源会保存在表格中，便于后续比较。
+
+请不要通过此调查收集身份证号、联系方式、健康信息等敏感个人信息。
