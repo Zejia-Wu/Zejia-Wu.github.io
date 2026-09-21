@@ -370,8 +370,8 @@
         input.type = "number";
         input.min = "1";
         input.max = "5";
-        input.step = "1";
-        input.inputMode = "numeric";
+        input.step = "0.1";
+        input.inputMode = "decimal";
         input.required = true;
         input.setAttribute("aria-label", "视频 " + videoData.position + " - " + metric.en);
 
@@ -683,7 +683,7 @@
 
     if (!scoringForm.checkValidity()) {
       submitMessage.className = "form-message error-message";
-      submitMessage.textContent = "请为每个视频填写四项评分，范围为 1–5 分整数。";
+      submitMessage.textContent = "请为每个视频填写四项评分，范围为 1.0–5.0 分。";
       scoringForm.reportValidity();
       return;
     }

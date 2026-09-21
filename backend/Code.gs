@@ -248,7 +248,7 @@ function buildRow_(payload) {
 
 function numberOrBlank_(value) {
   const number = Number(value);
-  return Number.isInteger(number) && number >= 1 && number <= 5 ? number : "";
+  return Number.isFinite(number) ? number : "";
 }
 
 function safeCell_(value) {
