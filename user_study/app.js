@@ -27,7 +27,7 @@
     },
     {
       key: "content_alignment",
-      zh: "内容对齐",
+      zh: "语义对齐",
       en: "Content Alignment"
     },
     {
