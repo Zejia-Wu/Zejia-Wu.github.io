@@ -364,19 +364,33 @@
         label.htmlFor = inputId;
         label.innerHTML = "<span>" + metric.zh + "</span><small>" + metric.en + "</small>";
 
+        var control = document.createElement("div");
+        control.className = "score-control";
+
         var input = document.createElement("input");
         input.id = inputId;
         input.name = inputId;
-        input.type = "number";
+        input.type = "range";
         input.min = "1";
         input.max = "5";
-        input.step = "0.1";
-        input.inputMode = "decimal";
+        input.step = "1";
+        input.value = "3";
+        input.className = "score-range";
         input.required = true;
         input.setAttribute("aria-label", "视频 " + videoData.position + " - " + metric.en);
 
+        var valueOutput = document.createElement("output");
+        valueOutput.className = "score-value";
+        valueOutput.textContent = input.value;
+        valueOutput.setAttribute("aria-live", "polite");
+        input.addEventListener("input", function () {
+          valueOutput.textContent = input.value;
+        });
+
+        control.appendChild(input);
+        control.appendChild(valueOutput);
         row.appendChild(label);
-        row.appendChild(input);
+        row.appendChild(control);
         table.appendChild(row);
       });
 
@@ -668,13 +682,15 @@
     });
   });
 
-  autofillButton.addEventListener("click", function () {
+  if (autofillButton) {
+    autofillButton.addEventListener("click", function () {
     scoreGrid.querySelectorAll("input[type=number]").forEach(function (input) {
       input.value = "5";
     });
     submitMessage.className = "form-message";
     submitMessage.textContent = "测试评分已填入 5 分；请确认后再点击提交。";
   });
+  }
 
   scoringForm.addEventListener("submit", async function (event) {
     event.preventDefault();
