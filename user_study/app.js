@@ -12,7 +12,6 @@
   var legacyLocalStorageKeys = ["user-study-submissions-v1", "user-study-history-v1"];
   var totalSetCount = 13;
   var targetGroupCount = 8;
-  var testMode = new URLSearchParams(window.location.search).get("test") === "1";
 
   var metrics = [
     {
@@ -45,9 +44,6 @@
     nickname: "",
     setId: null,
     displayVideos: [],
-    completedPositions: new Set(),
-    missingPositions: new Set(),
-    completionMode: "watched",
     completedSetIds: new Set(),
     availableSetIds: [],
     groupsCompleted: 0
@@ -60,11 +56,8 @@
   var nicknameInput = document.getElementById("nickname");
   var introError = document.getElementById("intro-error");
   var videoGrid = document.getElementById("video-grid");
-  var progressCount = document.getElementById("progress-count");
   var roundSummary = document.getElementById("round-summary");
   var promptText = document.getElementById("prompt-text");
-  var watchStatus = document.getElementById("watch-status");
-  var skipVideosButton = document.getElementById("skip-videos");
   var scoringSection = document.getElementById("scoring-section");
   var scoreGrid = document.getElementById("score-grid");
   var scoringForm = document.getElementById("scoring-form");
@@ -105,9 +98,6 @@
         src: videoBaseUrl + "/" + source + "/" + file
       };
     });
-    state.completedPositions = new Set();
-    state.missingPositions = new Set();
-    state.completionMode = "watched";
   }
 
   function allSetIds() {
@@ -163,19 +153,6 @@
     video.setAttribute("muted", "");
     video.setAttribute("loop", "");
 
-    var completionRecorded = false;
-    function detectCompletion() {
-      if (completionRecorded || !Number.isFinite(video.duration) || video.duration <= 0) {
-        return;
-      }
-      if (video.currentTime >= video.duration - 0.25) {
-        completionRecorded = true;
-        markComplete(videoData.position, "watched");
-      }
-    }
-
-    video.addEventListener("timeupdate", detectCompletion);
-    video.addEventListener("ended", detectCompletion);
     video.addEventListener("loadedmetadata", function () {
       video.currentTime = 0;
       var playRequest = video.play();
@@ -251,10 +228,8 @@
       card.appendChild(header);
       card.appendChild(frame);
       card.appendChild(footer);
-    videoGrid.appendChild(card);
+      videoGrid.appendChild(card);
     });
-
-    updateProgress();
   }
 
   function getCard(position) {
@@ -262,17 +237,12 @@
   }
 
   function markMissing(position, card, video, placeholder) {
-    if (state.completedPositions.has(position)) {
-      return;
-    }
-    state.missingPositions.add(position);
     video.hidden = true;
     placeholder.hidden = false;
     card.classList.add("is-missing");
     card.querySelector(".video-state").textContent = "暂缺资源";
     card.querySelector(".video-card-footer span").textContent = "视频制作完成后可替换此占位资源";
     card.querySelector(".video-expand").hidden = true;
-    updateProgress();
   }
 
   function openVideoModal(videoData, trigger) {
@@ -429,7 +399,7 @@
       submitted_at: new Date().toISOString(),
       nickname: state.nickname,
       set_id: state.setId,
-      completion_mode: state.completionMode,
+      completion_mode: "not_required",
       display_order: state.displayVideos.map(function (videoData) {
         return videoData.source;
       }),
@@ -539,7 +509,8 @@
     refreshRoundUi();
     renderPrompt();
     renderVideoCards();
-    setHidden(scoringSection, true);
+    renderScoreCards();
+    setHidden(scoringSection, false);
     submitButton.disabled = false;
     submitMessage.textContent = "";
     setHidden(studyScreen, false);
@@ -692,17 +663,6 @@
       startButton.firstChild.textContent = "开始调查 ";
       showIntroError("历史记录查询失败，请稍后重试。 ");
     }
-  });
-
-  skipVideosButton.addEventListener("click", function () {
-    var positions = testMode
-      ? state.displayVideos.map(function (videoData) { return videoData.position; })
-      : Array.from(state.missingPositions);
-    positions.filter(function (position) {
-      return !state.completedPositions.has(position);
-    }).forEach(function (position) {
-      markComplete(position, "skipped");
-    });
   });
 
   if (autofillButton) {

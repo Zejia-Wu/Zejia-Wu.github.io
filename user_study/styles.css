@@ -559,6 +559,12 @@ button:disabled {
   padding: 3px 16px 12px;
 }
 
+.progress-chip,
+.watch-footer,
+.legacy-watch-instruction {
+  display: none;
+}
+
 .score-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(170px, 1.25fr);

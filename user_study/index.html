@@ -65,7 +65,7 @@
             </div>
           </div>
 
-          <p class="instruction-line">
+          <p class="instruction-line legacy-watch-instruction">
             请根据视频内容进行观看。视频全部播放完成后，评分区域会自动出现。
           </p>
 
@@ -75,12 +75,13 @@
           </section>
 
           <div id="video-grid" class="video-grid" aria-live="polite"></div>
+          <p class="instruction-line">视频正在循环播放，可直接在下方完成评分。</p>
 
           <div class="watch-footer">
             <p id="watch-status" class="watch-status" role="status"></p>
-            <button id="skip-videos" class="secondary-button" type="button" hidden>
+            <!--
               测试：跳过视频进入评分
-            </button>
+            -->
           </div>
 
           <section id="scoring-section" class="panel scoring-panel" aria-labelledby="scoring-title" hidden>
