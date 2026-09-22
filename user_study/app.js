@@ -152,6 +152,41 @@
     element.hidden = hidden;
   }
 
+  function configureVideoPlayback(video, videoData) {
+    video.controls = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.preload = "metadata";
+    video.setAttribute("autoplay", "");
+    video.setAttribute("muted", "");
+    video.setAttribute("loop", "");
+
+    var completionRecorded = false;
+    function detectCompletion() {
+      if (completionRecorded || !Number.isFinite(video.duration) || video.duration <= 0) {
+        return;
+      }
+      if (video.currentTime >= video.duration - 0.25) {
+        completionRecorded = true;
+        markComplete(videoData.position, "watched");
+      }
+    }
+
+    video.addEventListener("timeupdate", detectCompletion);
+    video.addEventListener("ended", detectCompletion);
+    video.addEventListener("loadedmetadata", function () {
+      video.currentTime = 0;
+      var playRequest = video.play();
+      if (playRequest && typeof playRequest.catch === "function") {
+        playRequest.catch(function () {
+          // Muted autoplay can still be blocked by the browser; controls remain available.
+        });
+      }
+    }, { once: true });
+  }
+
   function renderVideoCards() {
     videoGrid.innerHTML = "";
 
@@ -179,9 +214,7 @@
       frame.className = "video-frame";
 
       var video = document.createElement("video");
-      video.controls = true;
-      video.playsInline = true;
-      video.preload = "metadata";
+      configureVideoPlayback(video, videoData);
       video.src = videoData.src;
       video.setAttribute("aria-label", "视频 " + videoData.position);
       video.dataset.position = String(videoData.position);
@@ -190,10 +223,6 @@
       placeholder.className = "video-placeholder";
       placeholder.hidden = true;
       placeholder.innerHTML = "<div><strong>视频资源暂未提供</strong><span>可以跳过空视频并继续评分。</span></div>";
-
-      video.addEventListener("ended", function () {
-        markComplete(videoData.position, "watched");
-      });
 
       video.addEventListener("error", function () {
         markMissing(videoData.position, card, video, placeholder);
@@ -251,15 +280,9 @@
     modalVideoContainer.innerHTML = "";
 
     var modalVideo = document.createElement("video");
-    modalVideo.controls = true;
-    modalVideo.playsInline = true;
-    modalVideo.preload = "metadata";
+    configureVideoPlayback(modalVideo, videoData);
     modalVideo.src = videoData.src;
     modalVideo.setAttribute("aria-label", "放大播放视频 " + videoData.position);
-    modalVideo.addEventListener("ended", function () {
-      markComplete(videoData.position, "watched");
-    });
-
     modalVideoContainer.appendChild(modalVideo);
     setHidden(videoModal, false);
     document.body.classList.add("modal-open");
