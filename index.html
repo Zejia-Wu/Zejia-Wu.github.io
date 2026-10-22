@@ -2,15 +2,224 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f7f4">
+  <meta name="description" content="Zejia Wu, undergraduate student at Zhejiang University.">
   <title>Zejia Wu</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f8f7f4;
+      --ink: #252724;
+      --muted: #777a73;
+      --rule: #d9d8d1;
+      --link: #4b5d50;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      width: min(100% - 48px, 760px);
+      margin: 0 auto;
+      padding: 84px 0 48px;
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--rule);
+      color: var(--muted);
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    header { padding: 76px 0 68px; }
+
+    .hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 32px;
+    }
+
+    .hero-copy { min-width: 0; }
+
+    .avatar {
+      display: block;
+      width: 116px;
+      height: 116px;
+      flex: 0 0 auto;
+      border: 1px solid var(--rule);
+      object-fit: cover;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(43px, 8vw, 68px);
+      font-weight: 400;
+      letter-spacing: -.045em;
+      line-height: 1.05;
+    }
+
+    .name-en {
+      margin: 13px 0 0;
+      color: var(--muted);
+      font-size: 19px;
+      letter-spacing: .01em;
+    }
+
+    .intro {
+      max-width: 500px;
+      margin: 31px 0 0;
+      color: #565951;
+      font-size: 18px;
+      line-height: 1.65;
+    }
+
+    .email {
+      display: inline-block;
+      margin-top: 20px;
+      color: var(--link);
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      text-decoration-color: #aeb4a9;
+      text-underline-offset: 4px;
+    }
+
+    section {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 24px;
+      padding: 25px 0 28px;
+      border-top: 1px solid var(--rule);
+    }
+
+    h2 {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .interests {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.8;
+    }
+
+    .publication {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .number {
+      padding-top: 2px;
+      color: var(--muted);
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+    }
+
+    .publication p { margin: 0; }
+
+    .publication a {
+      color: var(--ink);
+      font-size: 17px;
+      line-height: 1.55;
+      text-decoration-color: #b7b9b1;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+
+    .publication a:hover, .email:hover { color: #6b7e6f; }
+
+    .publication-meta {
+      margin-top: 8px !important;
+      color: var(--muted);
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+
+    footer {
+      margin-top: 40px;
+      padding-top: 15px;
+      border-top: 1px solid var(--rule);
+      color: #92938d;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      letter-spacing: .04em;
+    }
+
+    a:focus-visible { outline: 2px solid #768b79; outline-offset: 4px; }
+
+    @media (max-width: 600px) {
+      .page { width: min(100% - 40px, 760px); padding-top: 38px; }
+      header { padding: 58px 0 52px; }
+      .hero { gap: 18px; }
+      .avatar { width: 76px; height: 76px; }
+    }
+
+    @media (max-width: 390px) {
+      .hero { flex-direction: column-reverse; }
+      .avatar { width: 68px; height: 68px; }
+      section { grid-template-columns: 1fr; gap: 12px; }
+      .topline { font-size: 10px; }
+    }
+  </style>
 </head>
 <body>
-  <h1>吴泽嘉 / Zejia Wu</h1>
+  <main class="page">
+    <div class="topline">
+      <span>Personal homepage</span>
+      <span>Zhejiang University</span>
+    </div>
 
-  <p>Undergraduate student at Zhejiang University</p>
+    <header>
+      <div class="hero">
+        <div class="hero-copy">
+          <h1>吴泽嘉</h1>
+          <p class="name-en">Zejia Wu</p>
+          <p class="intro">Undergraduate student at Zhejiang University. Interested in mechanics, physics, and AI technology.</p>
+          <a class="email" href="mailto:wuzejia@zju.edu.cn">wuzejia@zju.edu.cn</a>
+        </div>
+        <img class="avatar" src="assets/img.png" alt="Zejia Wu">
+      </div>
+    </header>
 
-  <p>Email: wuzejia@zju.edu.cn</p>
+    <section aria-labelledby="interests-heading">
+      <h2 id="interests-heading">Research interests</h2>
+      <p class="interests">Mechanics<br>Physics<br>AI technology</p>
+    </section>
 
-  <p>Research interests: Machanics, Physics, and AI Technology</p>
+    <section aria-labelledby="publications-heading">
+      <h2 id="publications-heading">Publication</h2>
+      <div class="publication">
+        <span class="number">01</span>
+        <div>
+          <p><a href="https://doi.org/10.48550/arXiv.2609.33208" target="_blank" rel="noopener noreferrer">WorldAgent: Verification-Guided Agentic Physical World Construction</a></p>
+          <p class="publication-meta">arXiv</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>© Zejia Wu</footer>
+  </main>
 </body>
 </html>
